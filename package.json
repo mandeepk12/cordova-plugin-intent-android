@@ -1,0 +1,25 @@
+{
+  "name": "cordova-plugin-intent",
+  "version": "1.0.1",
+  "description": "Cordova Plugin for Android to access intent, supports latest android devices e.g. Android 13, Android 14",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mandeepk12/cordova-plugin-intent.git"
+  },
+  "cordova": {
+    "id": "com.betasoft.cordova.plugin.intent",
+    "platforms": [
+      "android"
+    ]
+  },
+  "keywords": [
+    "cordova",
+    "intent",
+    "share",
+    "send",
+    "ecosystem:cordova",
+    "cordova-android"
+  ],
+  "author": "Mandeep Kaur, BetaSoft Solutions Pvt. Ltd.",
+  "license": "MIT"
+}
