@@ -1,6 +1,6 @@
 # Cordova Plugin for accessing the Cordova Intent and handling onNewIntent (Android Only)
 
-**This plugin is an inspiration from [Cordova Plugin intent](https://github.com/napolitano/cordova-plugin-intent), as author is not maintaining this, so I am publishing under my branding as I will be maintaining this from now onwards.**
+**This plugin is an inspiration from [Cordova Plugin intent](https://github.com/napolitano/cordova-plugin-intent-android), as author is not maintaining this, so I am publishing under my branding as I will be maintaining this from now onwards.**
 
 **This plugin now suppports latest android devices upto android sdk 34 (Android 14).**
 
@@ -103,13 +103,13 @@ Cordova >= 6.0.0 apparently requires the launchMode to be set in `config.xml` as
 Add the plugin to your project using Cordova CLI:
 
 ```bash
-cordova plugin add https://github.com/mandeepk12/cordova-plugin-intent
+cordova plugin add https://github.com/mandeepk12/cordova-plugin-intent-android
 ```
 
 Or using PhoneGap CLI:
 
 ```bash
-phonegap local plugin add https://github.com/mandeepk12/cordova-plugin-intent
+phonegap local plugin add https://github.com/mandeepk12/cordova-plugin-intent-android
 ```
 
 ## Usage
