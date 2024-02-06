@@ -7,7 +7,7 @@
     "url": "git+https://github.com/mandeepk12/cordova-plugin-intent-android.git"
   },
   "cordova": {
-    "id": "com.betasoft.cordova.plugin.intent",
+    "id": "cordova-plugin-intent-android",
     "platforms": [
       "android"
     ]

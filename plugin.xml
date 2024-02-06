@@ -2,7 +2,7 @@
 
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
-        id="com.betasoft.cordova.plugin.intent"
+        id="cordova-plugin-intent-android"
         version="1.0.1">
 
     <name>IntentPlugin</name>
