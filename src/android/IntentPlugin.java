@@ -30,7 +30,7 @@ public class IntentPlugin extends CordovaPlugin {
         Log.d(pluginName,   "Initialized" );
         final Intent cordovaIntent = this.cordova.getActivity().getIntent();
         final String intentAction = cordovaIntent.getAction();
-        if(intentAction == Intent.ACTION_SEND){
+        if(intentAction == Intent.ACTION_SEND || intentAction == Intent.ACTION_SEND_MULTIPLE){
             this.bootIntent = cordovaIntent;
         }
     }
