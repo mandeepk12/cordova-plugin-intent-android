@@ -1,7 +1,6 @@
 package com.betasoft.cordova.plugin.intent;
 
 import java.io.File;
-import java.io.FileDescriptor;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
@@ -11,16 +10,12 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.content.ClipData;
-import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
-import android.os.ParcelFileDescriptor;
 import android.provider.OpenableColumns;
 import android.util.Log;
-
-import androidx.documentfile.provider.DocumentFile;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
@@ -144,19 +139,18 @@ public class IntentPlugin extends CordovaPlugin {
      * @param intent
      * @return
      */
-    private JSONObject getIntentJson1(Intent intent) {
+    private JSONObject getIntentJson(Intent intent) {
         JSONObject intentJSON = null;
         ClipData clipData = null;
         JSONObject[] items = null;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             clipData = intent.getClipData();
-            if(clipData != null) {
+            if (clipData != null) {
                 int clipItemCount = clipData.getItemCount();
                 items = new JSONObject[clipItemCount];
 
                 for (int i = 0; i < clipItemCount; i++) {
-
                     ClipData.Item item = clipData.getItemAt(i);
 
                     try {
@@ -164,13 +158,21 @@ public class IntentPlugin extends CordovaPlugin {
                         items[i].put("htmlText", item.getHtmlText());
                         items[i].put("intent", item.getIntent());
                         items[i].put("text", item.getText());
-                        items[i].put("uri", item.getUri());
+                        Uri uri = item.getUri();
+                        items[i].put("uri", uri);
+
+                        JSONObject fileMeta = getFileMetaFromUri(uri);
+                        // Merge metadata
+                        items[i].put("fileName", fileMeta.optString("name"));
+                        items[i].put("fileSize", fileMeta.optLong("size"));
+                        items[i].put("lastModified", fileMeta.optLong("modifiedDate"));
+
+
                     } catch (JSONException e) {
                         Log.d(pluginName, pluginName + " Error thrown during intent > JSON conversion");
                         Log.d(pluginName, e.getMessage());
                         Log.d(pluginName, Arrays.toString(e.getStackTrace()));
                     }
-
                 }
             }
         }
@@ -179,7 +181,7 @@ public class IntentPlugin extends CordovaPlugin {
             intentJSON = new JSONObject();
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                if(items != null) {
+                if (items != null) {
                     intentJSON.put("clipItems", new JSONArray(items));
                 }
             }
@@ -203,151 +205,7 @@ public class IntentPlugin extends CordovaPlugin {
         }
     }
 
-    private JSONObject getIntentJson(Intent intent) {
-        JSONObject intentJSON = new JSONObject();
-        JSONArray clipItemsArray = new JSONArray();
 
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                ClipData clipData = intent.getClipData();
-                if (clipData != null) {
-                    for (int i = 0; i < clipData.getItemCount(); i++) {
-                        ClipData.Item item = clipData.getItemAt(i);
-                        JSONObject itemJson = new JSONObject();
-
-                        Uri uri = item.getUri();
-                        itemJson.put("htmlText", item.getHtmlText());
-                        itemJson.put("intent", item.getIntent());
-                        itemJson.put("text", item.getText());
-                        itemJson.put("uri", uri != null ? uri.toString() : null);
-                        //itemJson.put("fileName", getFileName(uri));
-                        JSONObject fileInfo = getFileInfo(uri);
-                        itemJson.put("fileName", fileInfo.optString("fileName"));
-                        itemJson.put("fileSize", fileInfo.optLong("fileSize"));
-                        itemJson.put("lastModified", fileInfo.optLong("lastModified"));
-
-                        clipItemsArray.put(itemJson);
-                    }
-                }
-            }
-
-            // Fallback for older versions or single data URI
-            Uri dataUri = intent.getData();
-            if (dataUri != null) {
-                JSONObject itemJson = new JSONObject();
-                itemJson.put("uri", dataUri.toString());
-                //itemJson.put("fileName", getFileName(dataUri));
-                JSONObject fileInfo = getFileInfo(dataUri);
-                itemJson.put("fileName", fileInfo.optString("fileName"));
-                itemJson.put("fileSize", fileInfo.optLong("fileSize"));
-                itemJson.put("lastModified", fileInfo.optLong("lastModified"));
-                clipItemsArray.put(itemJson);
-            }
-
-            intentJSON.put("clipItems", clipItemsArray);
-            intentJSON.put("type", intent.getType());
-            intentJSON.put("extras", intent.getExtras());
-            intentJSON.put("action", intent.getAction());
-            intentJSON.put("categories", intent.getCategories());
-            intentJSON.put("flags", intent.getFlags());
-            intentJSON.put("component", intent.getComponent());
-            intentJSON.put("data", intent.getData() != null ? intent.getData().toString() : null);
-            intentJSON.put("package", intent.getPackage());
-
-        } catch (JSONException e) {
-            Log.e(pluginName, "Error building intent JSON", e);
-        }
-
-        return intentJSON;
-    }
-
-    private String getFileName(Uri uri) {
-        if (uri == null) return null;
-
-        String fileName = null;
-
-        if ("content".equalsIgnoreCase(uri.getScheme())) {
-            Context context = this.cordova.getContext();
-            Cursor cursor = context.getContentResolver().query(uri, null, null, null, null);
-            if (cursor != null) {
-                try {
-                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                    if (nameIndex != -1 && cursor.moveToFirst()) {
-                        fileName = cursor.getString(nameIndex);
-                    }
-                } catch (Exception e) {
-                    Log.e(pluginName, "Error reading file name from content URI", e);
-                } finally {
-                    cursor.close();
-                }
-            }
-        } else if ("file".equalsIgnoreCase(uri.getScheme())) {
-            fileName = new File(Objects.requireNonNull(uri.getPath())).getName();
-        }
-
-        return fileName;
-    }
-
-
-    private JSONObject getFileInfo(Uri uri) {
-        JSONObject fileInfo = new JSONObject();
-
-        if (uri == null) return fileInfo;
-
-        try {
-            String fileName = null;
-            long fileSize = -1;
-            long lastModified = -1;
-
-            if ("content".equalsIgnoreCase(uri.getScheme())) {
-                // Use DocumentFile for SAF-compatible URIs
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                    DocumentFile docFile = DocumentFile.fromSingleUri(this.cordova.getContext(), uri);
-                    if (docFile != null) {
-                        fileName = docFile.getName();
-                        fileSize = docFile.length();
-                        lastModified = docFile.lastModified();
-                    }
-                }
-
-                // Fallback to ContentResolver if DocumentFile fails
-                if (fileName == null) {
-                    Cursor cursor = this.cordova.getContext().getContentResolver().query(uri, null, null, null, null);
-                    if (cursor != null) {
-                        try {
-                            int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                            int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
-                            if (cursor.moveToFirst()) {
-                                if (nameIndex != -1) {
-                                    fileName = cursor.getString(nameIndex);
-                                }
-                                if (sizeIndex != -1) {
-                                    fileSize = cursor.getLong(sizeIndex);
-                                }
-                            }
-                        } finally {
-                            cursor.close();
-                        }
-                    }
-                }
-
-            } else if ("file".equalsIgnoreCase(uri.getScheme())) {
-                File file = new File(Objects.requireNonNull(uri.getPath()));
-                fileName = file.getName();
-                fileSize = file.length();
-                lastModified = file.lastModified();
-            }
-
-            fileInfo.put("fileName", fileName);
-            fileInfo.put("fileSize", fileSize);
-            fileInfo.put("lastModified", lastModified);
-
-        } catch (Exception e) {
-            Log.e(pluginName, "Error extracting file info", e);
-        }
-
-        return fileInfo;
-    }
     public boolean getRealPathFromContentUrl(final JSONArray data, final CallbackContext context) {
 
         if(!(data.length() == 1)) {
@@ -390,4 +248,59 @@ public class IntentPlugin extends CordovaPlugin {
         */
     }
 
+    private JSONObject getFileMetaFromUri(Uri uri) {
+        JSONObject meta = new JSONObject();
+        try {
+            // File name
+            String name = null;
+            long size = -1;
+            long modDate = 0;
+
+            if ("file".equalsIgnoreCase(uri.getScheme())) {
+                File file = new File(Objects.requireNonNull(uri.getPath()));
+                name = file.getName();
+                size = file.length();
+                modDate = file.lastModified();
+            } else {
+                Cursor cursor = cordova.getActivity().getContentResolver()
+                        .query(uri, null, null, null, null);
+                if (cursor != null) {
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex != -1 && cursor.moveToFirst()) {
+                        name = cursor.getString(nameIndex);
+                    }
+
+                    int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+                    if (sizeIndex != -1) {
+                        size = cursor.getLong(sizeIndex);
+                    }
+
+                    // Try common modified date columns
+                    int modIndex = cursor.getColumnIndex("last_modified");
+                    if (modIndex == -1) {
+                        modIndex = cursor.getColumnIndex("date_modified");
+                    }
+                    if (modIndex != -1) {
+                        modDate = cursor.getLong(modIndex);
+                    }
+
+                    cursor.close();
+                }
+            }
+
+            // Fallbacks
+            if (modDate <= 0) {
+                modDate = System.currentTimeMillis();
+            }
+
+            meta.put("uri", uri.toString());
+            if (name != null) meta.put("name", name);
+            if (size >= 0) meta.put("size", size);
+            meta.put("modifiedDate", modDate);
+
+        } catch (Exception e) {
+            Log.d(pluginName, "Error building file metadata: " + e.getMessage());
+        }
+        return meta;
+    }
 }
